@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # Os testes primeiro: sao eles que prendem os numeros das tabelas.
+      - name: Testes
+        run: dotnet test testes/Condorcet.Testes/Condorcet.Testes.csproj -c Release --nologo
+
+      - name: Eleicoes sem vencedor de Condorcet
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- paradoxo
+
+      - name: O que cada regra de apuracao elege
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- regras
+
+      # A varredura ate 23 eleitores: e ela que acha a menor urna em que ganhar
+      # votos derruba o vencedor, e ela precisa ir longe (a resposta esta no 17).
+      - name: Monotonia do segundo turno
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- monotonia
+
+      - name: Monotonia das cinco regras
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- monotonia-todas
